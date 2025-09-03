@@ -11,6 +11,7 @@ export default function Sidebar() {
     relationships,
     selectedTable,
     selectedRelationship,
+    setSelectedRelationship,
     updateTable,
     deleteTable,
     addField,
