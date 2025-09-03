@@ -68,6 +68,7 @@ export default function Sidebar() {
     deleteRelationship,
     addPolicy,
     deletePolicy,
+    updatePolicy,
   } = useSchemaStore();
 
   const [editingTable, setEditingTable] = useState<string | null>(null);
@@ -691,62 +692,6 @@ export default function Sidebar() {
               <p className="text-xs text-yellow-700 mt-1">
                 Enable Row Level Security above to configure access policies for this table.
               </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {selectedRelationshipData && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800">Relationship</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
-                value={selectedRelationshipData.type}
-                onChange={(e) => updateRelationship(selectedRelationship, { type: e.target.value as any })}
-                className="w-full border rounded px-3 py-2"
-              >
-                <option value="one-to-one">One to One</option>
-                <option value="one-to-many">One to Many</option>
-                <option value="many-to-many">Many to Many</option>
-              </select>
-            </div>
-            <button
-              onClick={() => {
-                deleteRelationship(selectedRelationship);
-                toast.success('Relationship deleted');
-              }}
-              className="w-full px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-            >
-              Delete Relationship
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {policy.operation} for {policy.role}
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const newPolicy = {
-                    id: `policy-${Date.now()}`,
-                    name: 'New Policy',
-                    operation: 'SELECT' as const,
-                    role: 'authenticated',
-                    using: 'auth.uid() = user_id',
-                  };
-                  addPolicy(selectedTable, newPolicy);
-                }}
-                className="w-full px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-              >
-                Add Policy
-              </button>
             </div>
           )}
         </div>
