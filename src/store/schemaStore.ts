@@ -232,7 +232,7 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
       highlightedFields: new Set()
     });
     get().saveToStorage();
-  }
+  },
   loadFromStorage: () => {
     try {
       const stored = localStorage.getItem('database-schema');
