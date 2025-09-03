@@ -500,5 +500,3 @@ function PolicyEditForm({ policy, tableId, onSave, onCancel }: PolicyEditFormPro
     </div>
   );
 }
-
-export default PolicyEditor;
