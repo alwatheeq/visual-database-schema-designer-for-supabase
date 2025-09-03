@@ -78,15 +78,30 @@ export default function Sidebar() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-800">
               {editingTable === selectedTable ? (
-                <input
-                  type="text"
-                  value={selectedTableData.name}
-                  onChange={(e) => updateTable(selectedTable, { name: e.target.value })}
-                  className="border rounded px-2 py-1 text-sm w-full"
-                  autoFocus
-                />
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={selectedTableData.name}
+                    onChange={(e) => updateTable(selectedTable, { name: e.target.value })}
+                    className="border rounded px-2 py-1 text-sm w-full"
+                    placeholder="Table name"
+                    autoFocus
+                  />
+                  <textarea
+                    value={selectedTableData.description || ''}
+                    onChange={(e) => updateTable(selectedTable, { description: e.target.value })}
+                    className="border rounded px-2 py-1 text-sm w-full resize-none"
+                    placeholder="Table description (optional)"
+                    rows={2}
+                  />
+                </div>
               ) : (
-                selectedTableData.name
+                <div>
+                  <div>{selectedTableData.name}</div>
+                  {selectedTableData.description && (
+                    <div className="text-sm text-gray-600 mt-1">{selectedTableData.description}</div>
+                  )}
+                </div>
               )}
             </h3>
             <div className="flex gap-1">

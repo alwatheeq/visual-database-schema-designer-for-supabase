@@ -198,6 +198,10 @@ export function generateBoltPrompt(schema: Schema): string {
   tables.forEach((table) => {
     prompt += `### ${table.name}\n`;
     
+    if (table.description) {
+      prompt += `Description: ${table.description}\n\n`;
+    }
+    
     if (table.fields.length > 0) {
       prompt += `Fields:\n`;
       table.fields.forEach((field) => {

@@ -25,6 +25,7 @@ export interface Policy {
 export interface Table {
   id: string;
   name: string;
+  description?: string;
   fields: Field[];
   position: { x: number; y: number };
   color: string;

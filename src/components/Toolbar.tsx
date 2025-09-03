@@ -27,6 +27,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ onGenerateScript, onToggleAI }) => {
     const newTable = {
       id: `table-${Date.now()}`,
       name: `table_${tables.length + 1}`,
+      description: '',
       fields: [
         {
           id: 'id',

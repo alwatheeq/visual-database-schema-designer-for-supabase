@@ -195,6 +195,9 @@ function prepareDetailedSchemaDescription(tables: any[], relationships: any[]): 
   
   tables.forEach((table, index) => {
     description += `TABLE ${index + 1}: ${table.name}\n`;
+    if (table.description) {
+      description += `├─ Description: ${table.description}\n`;
+    }
     description += `├─ RLS Required: ${table.enableRLS ? 'YES' : 'NO'}\n`;
     description += `├─ Total Fields: ${table.fields.length}\n`;
     description += `├─ Color Theme: ${table.color}\n`;
