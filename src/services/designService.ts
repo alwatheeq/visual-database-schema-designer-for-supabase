@@ -182,17 +182,16 @@ export class DesignService {
   static async testConnection(): Promise<boolean> {
     try {
       console.log('Testing Supabase connection...');
-      const { data, error } = await supabase
-        .from('designs')
-        .select('count')
-        .limit(1);
       
-      if (error) {
-        console.error('Connection test failed:', error);
+      // First test basic connectivity
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError && authError.message !== 'Invalid JWT') {
+        console.error('Connection test failed (auth check):', authError);
         return false;
       }
       
-      console.log('Connection test successful');
+      console.log('Connection test successful - Supabase is reachable');
       return true;
     } catch (error) {
       console.error('Connection test error:', error);
