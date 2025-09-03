@@ -37,6 +37,10 @@ export async function modifySchemaWithAI(
   6. Enable RLS by default for new tables
   7. Preserve positions of existing tables
   8. Follow Supabase naming conventions (snake_case)
+  9. When adding new tables, place them at reasonable positions that don't overlap
+  10. Generate meaningful field names and types based on the context
+  11. Add appropriate relationships between new and existing tables when relevant
+  12. Use different colors for new tables from this palette: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316']
   
   Return ONLY the JSON object, no explanations.`;
 
@@ -68,6 +72,27 @@ export async function modifySchemaWithAI(
     if (!modifiedSchema.relationships || !Array.isArray(modifiedSchema.relationships)) {
       throw new Error('Invalid response: missing relationships array');
     }
+    
+    // Ensure all tables have required properties for visual display
+    const TABLE_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
+    
+    modifiedSchema.tables = modifiedSchema.tables.map((table, index) => ({
+      ...table,
+      position: table.position || { 
+        x: 100 + (index * 300), 
+        y: 100 + ((index % 3) * 200) 
+      },
+      color: table.color || TABLE_COLORS[index % TABLE_COLORS.length],
+      enableRLS: table.enableRLS !== undefined ? table.enableRLS : true,
+      policies: table.policies || [],
+      fields: table.fields.map(field => ({
+        ...field,
+        isPrimaryKey: field.isPrimaryKey || false,
+        isForeignKey: field.isForeignKey || false,
+        isUnique: field.isUnique || field.isPrimaryKey || false,
+        isNullable: field.isNullable !== undefined ? field.isNullable : !field.isPrimaryKey
+      }))
+    }));
     
     console.log('✅ Schema modification completed successfully');
     return modifiedSchema;

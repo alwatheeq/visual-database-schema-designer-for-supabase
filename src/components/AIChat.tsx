@@ -13,25 +13,64 @@ export default function AIChat({ onClose }: AIChatProps) {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conversationHistory, setConversationHistory] = useState<Array<{
+    type: 'user' | 'assistant';
+    content: string;
+    timestamp: Date;
+  }>>([]);
 
   const handleSend = async () => {
     if (!message.trim() || isLoading) return;
 
+    // Add user message to conversation
+    const userMessage = { type: 'user' as const, content: message.trim(), timestamp: new Date() };
+    setConversationHistory(prev => [...prev, userMessage]);
     setIsLoading(true);
     setError(null);
+    const currentMessage = message.trim();
+    setMessage(''); // Clear input immediately
 
     try {
+      console.log('🎯 AI Schema Assistant: Processing request:', currentMessage);
+      console.log('📊 Current schema state:', { 
+        tables: tables.length, 
+        relationships: relationships.length 
+      });
+      
       const modifiedSchema = await modifySchemaWithAI(
         { tables, relationships },
-        message
+        currentMessage
       );
       
+      console.log('✅ Schema modified successfully:', {
+        newTables: modifiedSchema.tables.length,
+        newRelationships: modifiedSchema.relationships.length
+      });
+      
       loadDesign(modifiedSchema.tables, modifiedSchema.relationships);
-      toast.success('Schema updated successfully!');
-      setMessage('');
+      
+      // Add success message to conversation
+      const assistantMessage = { 
+        type: 'assistant' as const, 
+        content: `✅ Successfully ${modifiedSchema.tables.length > tables.length ? 'added new tables and ' : ''}updated your schema! Added ${modifiedSchema.tables.length - tables.length} new table(s) and ${modifiedSchema.relationships.length - relationships.length} new relationship(s).`,
+        timestamp: new Date() 
+      };
+      setConversationHistory(prev => [...prev, assistantMessage]);
+      
+      toast.success(`Schema updated! Added ${modifiedSchema.tables.length - tables.length} table(s)`);
     } catch (err) {
+      console.error('❌ AI Schema Assistant error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to modify schema';
       setError(errorMessage);
+      
+      // Add error message to conversation
+      const errorResponse = { 
+        type: 'assistant' as const, 
+        content: `❌ Error: ${errorMessage}`,
+        timestamp: new Date() 
+      };
+      setConversationHistory(prev => [...prev, errorResponse]);
+      
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -58,12 +97,35 @@ export default function AIChat({ onClose }: AIChatProps) {
       </div>
       
       <div className="p-4">
+        {/* Conversation History */}
+        {conversationHistory.length > 0 && (
+          <div className="mb-4 max-h-48 overflow-y-auto space-y-2">
+            {conversationHistory.map((msg, index) => (
+              <div 
+                key={index} 
+                className={`p-2 rounded text-sm ${
+                  msg.type === 'user' 
+                    ? 'bg-purple-100 text-purple-800 ml-4' 
+                    : 'bg-gray-100 text-gray-800 mr-4'
+                }`}
+              >
+                <div className="font-medium text-xs mb-1">
+                  {msg.type === 'user' ? 'You' : 'AI Assistant'}
+                </div>
+                {msg.content}
+              </div>
+            ))}
+          </div>
+        )}
+        
         <div className="mb-4 text-sm text-gray-600">
-          Ask me to modify your schema. For example:
+          Ask me to create tables or modify your schema. For example:
           <ul className="mt-2 space-y-1 text-xs">
-            <li>• "Add a users table with email and password"</li>
-            <li>• "Create a blog schema with posts and comments"</li>
-            <li>• "Add authentication tables"</li>
+            <li>• "Create a users table with email, password, and profile fields"</li>
+            <li>• "Add a products table with name, price, and category"</li>
+            <li>• "Create a blog schema with posts, comments, and tags"</li>
+            <li>• "Add an orders table related to users and products"</li>
+            <li>• "Create authentication and profile tables"</li>
           </ul>
         </div>
         
@@ -79,7 +141,7 @@ export default function AIChat({ onClose }: AIChatProps) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Describe how you want to modify the schema..."
+            placeholder="Describe what tables you want to create or how to modify the schema..."
             className="flex-1 border rounded-lg px-3 py-2 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-purple-500"
             disabled={isLoading}
           />
@@ -95,6 +157,13 @@ export default function AIChat({ onClose }: AIChatProps) {
             )}
           </button>
         </div>
+        
+        {isLoading && (
+          <div className="mt-2 text-xs text-gray-500 flex items-center">
+            <Loader2 size={12} className="animate-spin mr-1" />
+            AI is generating tables and relationships...
+          </div>
+        )}
       </div>
     </div>
   );
