@@ -28,7 +28,7 @@ const edgeTypes: EdgeTypes = {
 };
 
 export default function Canvas() {
-  const { tables, relationships, updateTable, addRelationship, addField, setSelectedTable, setSelectedRelationship, setHighlightedFields } = useSchemaStore();
+  const { tables, relationships, updateTable, addRelationship, addField, setSelectedTable, setSelectedRelationship } = useSchemaStore();
 
   const nodes = useMemo(() => {
     return tables.map((table) => ({
@@ -286,8 +286,7 @@ export default function Canvas() {
   const onPaneClick = useCallback(() => {
     setSelectedTable(null);
     setSelectedRelationship(null);
-    setHighlightedFields(new Set());
-  }, [setSelectedTable, setSelectedRelationship, setHighlightedFields]);
+  }, [setSelectedTable, setSelectedRelationship]);
 
   return (
     <div className="w-full h-full">
