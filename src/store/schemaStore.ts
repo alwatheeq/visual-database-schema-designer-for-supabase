@@ -209,8 +209,7 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
       selectedTable: null,
       selectedRelationship: null,
       currentDesignId: null,
-  setHighlightedFields: (fields) => set({ highlightedFields: fields }),
-      highlightedFields: new Set()
+      highlightedFields: new Set(),
       currentDesignName: null
     });
     get().saveToStorage();
