@@ -502,4 +502,3 @@ function PolicyEditForm({ policy, tableId, onSave, onCancel }: PolicyEditFormPro
 }
 
 export default PolicyEditor;
-</action>
