@@ -1,6 +1,80 @@
 import { Schema, Table, Field, Relationship } from '../types/schema';
-import { openai, generateSupabaseScriptWithAI } from './openaiClient';
+import { openai, generateSupabaseScriptWithAI, testOpenAIConnection } from './openaiClient';
 
+// Generate Bolt prompt using OpenAI
+export async function generateBoltPromptWithAI(tables: any[], relationships: any[]): Promise<string> {
+  if (!openai) {
+    console.warn('OpenAI not available, using manual prompt generation');
+    return generateManualBoltPrompt({ tables, relationships });
+  }
+
+  console.log('🤖 Generating Bolt prompt with OpenAI...');
+
+  const systemPrompt = `You are an expert full-stack developer who creates detailed, comprehensive prompts for Bolt to generate complete web applications with Supabase backends.
+
+CRITICAL REQUIREMENTS:
+1. Generate a COMPLETE, detailed prompt that Bolt can use to create a full web application
+2. Include ALL database schema details with proper descriptions
+3. Specify modern React components with TypeScript
+4. Include Supabase authentication and RLS requirements
+5. Describe the complete user interface and user experience
+6. Include all CRUD operations and data management features
+7. Specify responsive design and modern UI/UX patterns
+8. Include proper error handling and loading states
+9. Describe the application's purpose and functionality clearly
+10. Include specific technical requirements and best practices
+
+PROMPT STRUCTURE:
+1. Application Overview (purpose, target users, main features)
+2. Database Schema (detailed tables, fields, relationships, RLS)
+3. User Interface Requirements (pages, components, navigation)
+4. Authentication & Security (user management, permissions)
+5. Technical Specifications (React, TypeScript, Tailwind, Supabase)
+6. User Experience Guidelines (responsive design, interactions)
+7. Additional Features (search, filtering, pagination, etc.)
+
+Make the prompt comprehensive enough that Bolt can generate a complete, production-ready application.
+Return ONLY the prompt text, no explanations or markdown formatting.`;
+
+  const schemaDescription = prepareDetailedSchemaDescription(tables, relationships);
+  
+  const userPrompt = `Generate a comprehensive Bolt prompt for creating a web application with this database schema:
+
+${schemaDescription}
+
+The prompt should describe:
+- Complete application functionality based on the schema
+- Modern React/TypeScript interface with Tailwind CSS
+- Full Supabase integration with authentication
+- All CRUD operations for each table
+- Proper RLS implementation and user permissions
+- Responsive design and excellent user experience
+- Professional UI components and interactions
+
+Create a prompt that will result in a complete, functional web application.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 3000,
+    });
+
+    const prompt = response.choices[0].message.content;
+    if (!prompt) throw new Error('No response from OpenAI');
+    
+    console.log('✅ OpenAI generated Bolt prompt successfully');
+    return prompt;
+  } catch (error) {
+    console.error('❌ OpenAI Bolt prompt generation failed:', error);
+    console.log('🔄 Falling back to manual prompt generation...');
+    throw error;
+  }
+}
 export async function generateSupabaseScript(schema: Schema): Promise<string> {
   const { tables, relationships } = schema;
   
@@ -14,6 +88,18 @@ export async function generateSupabaseScript(schema: Schema): Promise<string> {
   // Try OpenAI generation first
   if (!openai) {
     console.warn('⚠️ OpenAI not configured, using manual generation');
+    return generateManualSupabaseScript(schema);
+  }
+
+  // Test OpenAI connection first
+  try {
+    const isConnected = await testOpenAIConnection();
+    if (!isConnected) {
+      console.warn('⚠️ OpenAI connection test failed, using manual generation');
+      return generateManualSupabaseScript(schema);
+    }
+  } catch (error) {
+    console.warn('⚠️ OpenAI connection test error, using manual generation');
     return generateManualSupabaseScript(schema);
   }
 
@@ -184,13 +270,35 @@ ${relationships.length > 0 ? relationships.map(r => {
   return script.trim();
 }
 
-export function generateBoltPrompt(schema: Schema): string {
+function generateManualBoltPrompt(schema: Schema): string {
   const { tables, relationships } = schema;
   
   if (tables.length === 0) {
     return 'No schema defined';
   }
 
+// Enhanced Bolt prompt generation with OpenAI fallback
+export async function generateBoltPrompt(schema: Schema): Promise<string> {
+  const { tables, relationships } = schema;
+  
+  if (tables.length === 0) {
+    return 'No schema defined';
+  }
+
+  // Try OpenAI generation first
+  if (openai) {
+    try {
+      console.log('🤖 Generating Bolt prompt with OpenAI...');
+      return await generateBoltPromptWithAI(tables, relationships);
+    } catch (error) {
+      console.error('❌ OpenAI Bolt prompt generation failed, using manual generation:', error);
+    }
+  }
+  
+  // Fallback to manual generation
+  console.log('📝 Using manual Bolt prompt generation');
+  return generateManualBoltPrompt(schema);
+}
   let prompt = `Create a Supabase database with the following schema:\n\n`;
   
   prompt += `## Tables\n\n`;
