@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Table } from '../types/schema';
+import { useSchemaStore } from '../store/schemaStore';
 import { Database, Key, Link, Shield, Hash } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -20,6 +21,9 @@ export default function TableNode({ data, selected }: TableNodeProps) {
   const [draggedField, setDraggedField] = useState<string | null>(null);
   const [dragOverField, setDragOverField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Get highlighted fields from store
+  const { highlightedFields } = useSchemaStore();
 
   // Global drag state cleanup
   useEffect(() => {
@@ -211,12 +215,16 @@ export default function TableNode({ data, selected }: TableNodeProps) {
                 key={field.id}
                 className={clsx(
                   'relative flex items-center gap-2 px-2 py-1 rounded text-sm transition-all',
+                  // Highlighted field (selected relationship)
+                  highlightedFields.has(`${data.id}-${field.id}`) && 'ring-2 ring-orange-400 bg-orange-100 border-orange-300',
                   // Base background colors
-                  field.isForeignKey 
-                    ? 'bg-blue-50 hover:bg-blue-100 border border-blue-200' 
-                    : field.isPrimaryKey 
-                    ? 'bg-amber-50 hover:bg-amber-100 border border-amber-200'
-                    : 'bg-white hover:bg-gray-50 border border-transparent',
+                  !highlightedFields.has(`${data.id}-${field.id}`) && (
+                    field.isForeignKey 
+                      ? 'bg-blue-50 hover:bg-blue-100 border border-blue-200' 
+                      : field.isPrimaryKey 
+                      ? 'bg-amber-50 hover:bg-amber-100 border border-amber-200'
+                      : 'bg-white hover:bg-gray-50 border border-transparent'
+                  ),
                   // Drag states
                   draggedField === field.id ? 'opacity-50 cursor-grabbing' : 'cursor-grab',
                   dragOverField === field.id && draggedField !== field.id && '!bg-green-100 !border-green-400 shadow-md',
@@ -236,15 +244,17 @@ export default function TableNode({ data, selected }: TableNodeProps) {
                   {field.isUnique && !field.isPrimaryKey && <Hash size={14} className="text-purple-500" />}
                   <span className={clsx(
                     'font-medium transition-colors',
-                    field.isPrimaryKey && 'text-amber-800',
-                    field.isForeignKey && 'text-blue-800',
-                    !field.isPrimaryKey && !field.isForeignKey && 'text-gray-700'
+                    highlightedFields.has(`${data.id}-${field.id}`) && 'text-orange-800 font-semibold',
+                    !highlightedFields.has(`${data.id}-${field.id}`) && field.isPrimaryKey && 'text-amber-800',
+                    !highlightedFields.has(`${data.id}-${field.id}`) && field.isForeignKey && 'text-blue-800',
+                    !highlightedFields.has(`${data.id}-${field.id}`) && !field.isPrimaryKey && !field.isForeignKey && 'text-gray-700'
                   )}>
                     {field.name}
                   </span>
                 </div>
                 <span className={clsx(
                   'text-xs',
+                  highlightedFields.has(`${data.id}-${field.id}`) ? 'text-orange-700 font-medium' :
                   field.isForeignKey ? 'text-blue-600' : 'text-gray-500'
                 )}>
                   {field.type}
