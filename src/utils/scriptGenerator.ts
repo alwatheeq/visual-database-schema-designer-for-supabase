@@ -277,28 +277,6 @@ function generateManualBoltPrompt(schema: Schema): string {
     return 'No schema defined';
   }
 
-// Enhanced Bolt prompt generation with OpenAI fallback
-export async function generateBoltPrompt(schema: Schema): Promise<string> {
-  const { tables, relationships } = schema;
-  
-  if (tables.length === 0) {
-    return 'No schema defined';
-  }
-
-  // Try OpenAI generation first
-  if (openai) {
-    try {
-      console.log('🤖 Generating Bolt prompt with OpenAI...');
-      return await generateBoltPromptWithAI(tables, relationships);
-    } catch (error) {
-      console.error('❌ OpenAI Bolt prompt generation failed, using manual generation:', error);
-    }
-  }
-  
-  // Fallback to manual generation
-  console.log('📝 Using manual Bolt prompt generation');
-  return generateManualBoltPrompt(schema);
-}
   let prompt = `Create a Supabase database with the following schema:\n\n`;
   
   prompt += `## Tables\n\n`;
@@ -338,7 +316,7 @@ export async function generateBoltPrompt(schema: Schema): Promise<string> {
         table.policies.forEach((policy) => {
           prompt += `- ${policy.name}: ${policy.operation} for ${policy.role}`;
           if (policy.using) prompt += ` using (${policy.using})`;
-          if (policy.withCheck) prompt += ` with check (${policy.withCheck})`;
+          if (policy.check) prompt += ` with check (${policy.check})`;
           prompt += '\n';
         });
       }
@@ -372,4 +350,27 @@ export async function generateBoltPrompt(schema: Schema): Promise<string> {
   prompt += `- Follow Supabase naming conventions\n`;
   
   return prompt;
+}
+
+// Enhanced Bolt prompt generation with OpenAI fallback
+export async function generateBoltPrompt(schema: Schema): Promise<string> {
+  const { tables, relationships } = schema;
+  
+  if (tables.length === 0) {
+    return 'No schema defined';
+  }
+
+  // Try OpenAI generation first
+  if (openai) {
+    try {
+      console.log('🤖 Generating Bolt prompt with OpenAI...');
+      return await generateBoltPromptWithAI(tables, relationships);
+    } catch (error) {
+      console.error('❌ OpenAI Bolt prompt generation failed, using manual generation:', error);
+    }
+  }
+  
+  // Fallback to manual generation
+  console.log('📝 Using manual Bolt prompt generation');
+  return generateManualBoltPrompt(schema);
 }
