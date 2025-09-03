@@ -138,12 +138,57 @@ export default function TableNode({ data, selected }: TableNodeProps) {
     }
   };
 
+  const handleDropOnTable = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear drag states immediately
+    setDragOverField(null);
+    setDraggedField(null);
+    setIsDragging(false);
+    
+    try {
+      const dragDataStr = e.dataTransfer.getData('application/json');
+      if (!dragDataStr) return;
+      
+      const dragData: DragData = JSON.parse(dragDataStr);
+      
+      // Don't allow dropping on the same table
+      if (dragData.tableId === data.id) {
+        return;
+      }
+      
+      // Dispatch custom event to create relationship (no target field specified)
+      const relationshipEvent = new CustomEvent('createRelationship', {
+        detail: {
+          source: dragData.tableId,
+          target: data.id,
+          sourceField: dragData.fieldId,
+          targetField: null,
+          sourceFieldName: dragData.fieldName,
+          targetFieldName: null,
+          sourceFieldType: dragData.fieldType,
+          targetFieldType: null
+        }
+      });
+      
+      window.dispatchEvent(relationshipEvent);
+    } catch (error) {
+      console.error('Error handling table drop:', error);
+    }
+  };
+
   return (
     <div
       className={clsx(
         'bg-white rounded-lg shadow-lg border-2 min-w-[250px] transition-all',
         selected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:shadow-xl'
       )}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'link';
+      }}
+      onDrop={handleDropOnTable}
     >
       <div
         className="px-4 py-3 rounded-t-lg text-white font-semibold flex items-center gap-2"

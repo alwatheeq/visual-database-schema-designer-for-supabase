@@ -2,10 +2,10 @@ export interface Field {
   id: string;
   name: string;
   type: string;
-  isPrimaryKey?: boolean;
-  isForeignKey?: boolean;
-  isUnique?: boolean;
-  isNullable?: boolean;
+  isPrimaryKey: boolean;
+  isForeignKey: boolean;
+  isUnique: boolean;
+  isNullable: boolean;
   defaultValue?: string;
   references?: {
     table: string;
@@ -13,26 +13,23 @@ export interface Field {
   };
 }
 
+export interface Policy {
+  id: string;
+  name: string;
+  command: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'ALL';
+  role: string;
+  using?: string;
+  check?: string;
+}
+
 export interface Table {
   id: string;
   name: string;
   fields: Field[];
-  position: {
-    x: number;
-    y: number;
-  };
-  color?: string;
-  enableRLS?: boolean;
+  position: { x: number; y: number };
+  color: string;
+  enableRLS: boolean;
   policies?: Policy[];
-}
-
-export interface Policy {
-  id: string;
-  name: string;
-  operation: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE';
-  role: string;
-  using?: string;
-  withCheck?: string;
 }
 
 export interface Relationship {
@@ -46,56 +43,26 @@ export interface Relationship {
   onUpdate?: 'CASCADE' | 'SET NULL' | 'RESTRICT' | 'NO ACTION';
 }
 
-export interface DatabaseType {
-  name: string;
-  category: 'text' | 'numeric' | 'date' | 'boolean' | 'json' | 'uuid' | 'binary';
-  supportsLength?: boolean;
-  supportsPrecision?: boolean;
-  supportsScale?: boolean;
+export interface VisualDesign {
+  tables: Table[];
+  relationships: Relationship[];
+  viewport?: {
+    x: number;
+    y: number;
+    zoom: number;
+  };
+  metadata?: {
+    version: string;
+    lastModified: string;
+  };
 }
 
-export const DATABASE_TYPES: DatabaseType[] = [
-  // Text types
-  { name: 'text', category: 'text' },
-  { name: 'varchar', category: 'text', supportsLength: true },
-  { name: 'char', category: 'text', supportsLength: true },
-  
-  // Numeric types
-  { name: 'integer', category: 'numeric' },
-  { name: 'bigint', category: 'numeric' },
-  { name: 'smallint', category: 'numeric' },
-  { name: 'decimal', category: 'numeric', supportsPrecision: true, supportsScale: true },
-  { name: 'numeric', category: 'numeric', supportsPrecision: true, supportsScale: true },
-  { name: 'real', category: 'numeric' },
-  { name: 'double precision', category: 'numeric' },
-  
-  // Date/Time types
-  { name: 'timestamp', category: 'date' },
-  { name: 'timestamptz', category: 'date' },
-  { name: 'date', category: 'date' },
-  { name: 'time', category: 'date' },
-  { name: 'timetz', category: 'date' },
-  { name: 'interval', category: 'date' },
-  
-  // Boolean
-  { name: 'boolean', category: 'boolean' },
-  
-  // JSON
-  { name: 'json', category: 'json' },
-  { name: 'jsonb', category: 'json' },
-  
-  // UUID
-  { name: 'uuid', category: 'uuid' },
-  
-  // Binary
-  { name: 'bytea', category: 'binary' }
-];
-
-// Field types for UI dropdowns - simplified version of DATABASE_TYPES
+// Field type options for dropdowns
 export const FIELD_TYPES = [
+  { value: 'uuid', label: 'UUID' },
   { value: 'text', label: 'Text' },
   { value: 'varchar', label: 'Varchar' },
-  { value: 'integer', label: 'Integer' },
+  { value: 'int', label: 'Integer' },
   { value: 'bigint', label: 'Big Integer' },
   { value: 'smallint', label: 'Small Integer' },
   { value: 'decimal', label: 'Decimal' },
@@ -103,46 +70,39 @@ export const FIELD_TYPES = [
   { value: 'real', label: 'Real' },
   { value: 'double precision', label: 'Double Precision' },
   { value: 'boolean', label: 'Boolean' },
-  { value: 'timestamp', label: 'Timestamp' },
-  { value: 'timestamptz', label: 'Timestamp with Timezone' },
   { value: 'date', label: 'Date' },
   { value: 'time', label: 'Time' },
-  { value: 'uuid', label: 'UUID' },
+  { value: 'timestamp', label: 'Timestamp' },
+  { value: 'timestamptz', label: 'Timestamp with Timezone' },
+  { value: 'interval', label: 'Interval' },
   { value: 'json', label: 'JSON' },
   { value: 'jsonb', label: 'JSONB' },
-  { value: 'bytea', label: 'Binary Data' }
+  { value: 'array', label: 'Array' },
+  { value: 'enum', label: 'Enum' },
+  { value: 'bytea', label: 'Binary' },
 ];
 
-// Default value suggestions for different field types
+// Default value suggestions based on field type
 export const DEFAULT_VALUE_SUGGESTIONS: Record<string, string[]> = {
-  'uuid': ['gen_random_uuid()', 'auth.uid()'],
-  'timestamp': ['now()', 'CURRENT_TIMESTAMP'],
-  'timestamptz': ['now()', 'CURRENT_TIMESTAMP'],
-  'date': ['CURRENT_DATE', 'now()'],
-  'time': ['CURRENT_TIME', 'now()'],
-  'boolean': ['false', 'true'],
-  'integer': ['0', '1'],
-  'bigint': ['0', '1'],
-  'smallint': ['0', '1'],
-  'decimal': ['0.0', '1.0'],
-  'numeric': ['0.0', '1.0'],
-  'real': ['0.0', '1.0'],
-  'double precision': ['0.0', '1.0'],
-  'text': ["''", "'default'"],
-  'varchar': ["''", "'default'"],
-  'json': ["'{}'", "'[]'"],
-  'jsonb': ["'{}'", "'[]'"]
+  uuid: ['gen_random_uuid()', 'auth.uid()'],
+  text: ["''", "'pending'", "'active'", "'inactive'", "'draft'", "'published'"],
+  varchar: ["''", "'pending'", "'active'", "'inactive'", "'draft'", "'published'"],
+  int: ['0', '1', '-1', '100', '1000'],
+  bigint: ['0', '1', '-1', '100', '1000'],
+  smallint: ['0', '1', '-1', '10', '100'],
+  decimal: ['0.00', '1.00', '100.00', '0.50'],
+  numeric: ['0.00', '1.00', '100.00', '0.50'],
+  real: ['0.0', '1.0', '100.0', '0.5'],
+  'double precision': ['0.0', '1.0', '100.0', '0.5'],
+  boolean: ['false', 'true'],
+  date: ['CURRENT_DATE', "'2024-01-01'"],
+  time: ['CURRENT_TIME', "'00:00:00'", "'12:00:00'"],
+  timestamp: ['now()', 'CURRENT_TIMESTAMP'],
+  timestamptz: ['now()', 'CURRENT_TIMESTAMP'],
+  interval: ["'1 day'", "'1 hour'", "'30 minutes'", "'1 week'", "'1 month'"],
+  json: ["'{}'", "'[]'", "'{\"status\": \"active\"}'"],
+  jsonb: ["'{}'", "'[]'", "'{\"status\": \"active\"}'"],
+  array: ["'{}'", "ARRAY[]::text[]"],
+  enum: ["'option1'", "'option2'", "'option3'"],
+  bytea: ["'\\x'", "decode('', 'hex')"],
 };
-
-export const RELATIONSHIP_TYPES = [
-  { value: 'one-to-one', label: 'One to One' },
-  { value: 'one-to-many', label: 'One to Many' },
-  { value: 'many-to-many', label: 'Many to Many' }
-] as const;
-
-export const CASCADE_OPTIONS = [
-  { value: 'CASCADE', label: 'CASCADE' },
-  { value: 'SET NULL', label: 'SET NULL' },
-  { value: 'RESTRICT', label: 'RESTRICT' },
-  { value: 'NO ACTION', label: 'NO ACTION' }
-] as const;

@@ -28,7 +28,7 @@ const edgeTypes: EdgeTypes = {
 };
 
 export default function Canvas() {
-  const { tables, relationships, updateTable, addRelationship, setSelectedTable, setSelectedRelationship } = useSchemaStore();
+  const { tables, relationships, updateTable, addRelationship, addField, setSelectedTable, setSelectedRelationship } = useSchemaStore();
 
   const nodes = useMemo(() => {
     return tables.map((table) => ({
@@ -70,6 +70,117 @@ export default function Canvas() {
     setEdges(edges);
   }, [edges, setEdges]);
 
+  const createMatchingField = (targetTableId: string, sourceField: any, sourceFieldName: string) => {
+    const newField = {
+      id: `field-${Date.now()}`,
+      name: sourceFieldName,
+      type: sourceField.type,
+      isPrimaryKey: false,
+      isForeignKey: true,
+      isUnique: false,
+      isNullable: true,
+      references: {
+        table: sourceField.tableId,
+        field: sourceField.id
+      }
+    };
+    
+    addField(targetTableId, newField);
+    return newField;
+  };
+
+  const handleRelationshipCreation = (
+    source: string,
+    target: string,
+    sourceField: string,
+    targetField: string | null,
+    sourceFieldName: string,
+    targetFieldName: string | null,
+    sourceFieldType: string,
+    targetFieldType: string | null
+  ) => {
+    const sourceTable = tables.find(t => t.id === source);
+    const targetTable = tables.find(t => t.id === target);
+
+    if (!sourceTable || !targetTable) {
+      toast.error('Invalid table reference');
+      return;
+    }
+
+    let finalTargetField = targetField;
+    let finalTargetFieldName = targetFieldName;
+
+    // If no target field specified or types don't match, create a matching field
+    if (!targetField || !targetFieldType || !areTypesCompatible(sourceFieldType, targetFieldType)) {
+      // Check if a field with the same name already exists
+      const existingField = targetTable.fields.find(f => f.name === sourceFieldName);
+      
+      if (existingField) {
+        if (areTypesCompatible(sourceFieldType, existingField.type)) {
+          // Use existing compatible field
+          finalTargetField = existingField.id;
+          finalTargetFieldName = existingField.name;
+          toast.success(`Using existing field: ${targetTable.name}.${existingField.name}`);
+        } else {
+          // Create field with modified name to avoid conflict
+          const newFieldName = `${sourceFieldName}_ref`;
+          const sourceFieldObj = sourceTable.fields.find(f => f.id === sourceField);
+          
+          if (sourceFieldObj) {
+            const newField = createMatchingField(target, { ...sourceFieldObj, tableId: source }, newFieldName);
+            finalTargetField = newField.id;
+            finalTargetFieldName = newField.name;
+            toast.success(`Created new field: ${targetTable.name}.${newFieldName} (${sourceFieldType})`);
+          }
+        }
+      } else {
+        // Create new field with same name and type
+        const sourceFieldObj = sourceTable.fields.find(f => f.id === sourceField);
+        
+        if (sourceFieldObj) {
+          const newField = createMatchingField(target, { ...sourceFieldObj, tableId: source }, sourceFieldName);
+          finalTargetField = newField.id;
+          finalTargetFieldName = newField.name;
+          toast.success(`Created new field: ${targetTable.name}.${sourceFieldName} (${sourceFieldType})`);
+        }
+      }
+    }
+
+    if (!finalTargetField) {
+      toast.error('Failed to create or find target field');
+      return;
+    }
+
+    // Check for duplicate relationships
+    const existingRelationship = relationships.find(
+      rel => 
+        (rel.source === source && rel.target === target && 
+         rel.sourceField === sourceField && rel.targetField === finalTargetField) ||
+        (rel.source === target && rel.target === source && 
+         rel.sourceField === finalTargetField && rel.targetField === sourceField)
+    );
+
+    if (existingRelationship) {
+      toast.error('This relationship already exists');
+      return;
+    }
+    
+    const newRelationship = {
+      id: `rel-${Date.now()}`,
+      source,
+      target,
+      sourceField,
+      targetField: finalTargetField,
+      type: 'one-to-many' as const,
+    };
+    
+    addRelationship(newRelationship);
+    toast.success(
+      `Relationship created: ${sourceTable.name}.${sourceFieldName} → ${targetTable.name}.${finalTargetFieldName}`,
+      { duration: 4000 }
+    );
+  };
+
   // Handle drag-to-connect relationships
   useEffect(() => {
     const handleCreateRelationship = (event: CustomEvent) => {
@@ -84,47 +195,15 @@ export default function Canvas() {
         targetFieldType 
       } = event.detail;
 
-      // Validate type compatibility
-      if (!areTypesCompatible(sourceFieldType, targetFieldType)) {
-        toast.error(getIncompatibilityMessage(sourceFieldType, targetFieldType));
-        return;
-      }
-
-      // Check for duplicate relationships
-      const existingRelationship = relationships.find(
-        rel => 
-          (rel.source === source && rel.target === target && 
-           rel.sourceField === sourceField && rel.targetField === targetField) ||
-          (rel.source === target && rel.target === source && 
-           rel.sourceField === targetField && rel.targetField === sourceField)
-      );
-
-      if (existingRelationship) {
-        toast.error('This relationship already exists');
-        return;
-      }
-
-      const sourceTable = tables.find(t => t.id === source);
-      const targetTable = tables.find(t => t.id === target);
-
-      if (!sourceTable || !targetTable) {
-        toast.error('Invalid table reference');
-        return;
-      }
-      
-      const newRelationship = {
-        id: `rel-${Date.now()}`,
+      handleRelationshipCreation(
         source,
         target,
         sourceField,
         targetField,
-        type: 'one-to-many' as const,
-      };
-      
-      addRelationship(newRelationship);
-      toast.success(
-        `Relationship created: ${sourceTable.name}.${sourceFieldName} → ${targetTable.name}.${targetFieldName}`,
-        { duration: 4000 }
+        sourceFieldName,
+        targetFieldName,
+        sourceFieldType,
+        targetFieldType
       );
     };
 
@@ -133,7 +212,7 @@ export default function Canvas() {
     return () => {
       window.removeEventListener('createRelationship', handleCreateRelationship as EventListener);
     };
-  }, [addRelationship, tables, relationships]);
+  }, [addRelationship, addField, tables, relationships]);
 
   const onNodeDragStop = useCallback(
     (event: React.MouseEvent, node: Node) => {
@@ -153,22 +232,10 @@ export default function Canvas() {
         return false;
       }
 
-      const [sourceTableId, sourceFieldId] = connection.sourceHandle.split('-');
-      const [targetTableId, targetFieldId] = connection.targetHandle.split('-');
-
-      const sourceTable = tables.find(t => t.id === sourceTableId);
-      const targetTable = tables.find(t => t.id === targetTableId);
-      const sourceField = sourceTable?.fields.find(f => f.id === sourceFieldId);
-      const targetField = targetTable?.fields.find(f => f.id === targetFieldId);
-
-      if (!sourceField || !targetField) {
-        return false;
-      }
-
-      // Check if types are compatible
-      return areTypesCompatible(sourceField.type, targetField.type);
+      // Allow all connections - we'll handle type compatibility in onConnect
+      return true;
     },
-    [tables]
+    []
   );
 
   const onConnect = useCallback(
@@ -187,40 +254,19 @@ export default function Canvas() {
           return;
         }
 
-        // Validate type compatibility
-        if (!areTypesCompatible(sourceField.type, targetField.type)) {
-          toast.error(getIncompatibilityMessage(sourceField.type, targetField.type));
-          return;
-        }
-
-        // Check for duplicate relationships
-        const existingRelationship = relationships.find(
-          rel => 
-            (rel.source === sourceTableId && rel.target === targetTableId && 
-             rel.sourceField === sourceFieldId && rel.targetField === targetFieldId) ||
-            (rel.source === targetTableId && rel.target === sourceTableId && 
-             rel.sourceField === targetFieldId && rel.targetField === sourceFieldId)
+        handleRelationshipCreation(
+          sourceTableId,
+          targetTableId,
+          sourceFieldId,
+          targetFieldId,
+          sourceField.name,
+          targetField.name,
+          sourceField.type,
+          targetField.type
         );
-
-        if (existingRelationship) {
-          toast.error('This relationship already exists');
-          return;
-        }
-        
-        const newRelationship = {
-          id: `rel-${Date.now()}`,
-          source: sourceTableId,
-          target: targetTableId,
-          sourceField: sourceFieldId,
-          targetField: targetFieldId,
-          type: 'one-to-many' as const,
-        };
-        
-        addRelationship(newRelationship);
-        toast.success(`Relationship created: ${sourceTable?.name}.${sourceField.name} → ${targetTable?.name}.${targetField.name}`);
       }
     },
-    [addRelationship, tables, relationships]
+    [tables, relationships, addRelationship, addField]
   );
 
   const onNodeClick = useCallback(

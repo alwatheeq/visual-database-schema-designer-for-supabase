@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import { Table, Field, Relationship } from '../types/schema';
+import { Table, Field, Relationship, Policy } from '../types/schema';
 
 interface SchemaStore {
   tables: Table[];
   relationships: Relationship[];
   selectedTable: string | null;
   selectedRelationship: string | null;
+  currentDesignId: string | null;
+  currentDesignName: string | null;
   
   addTable: (table: Table) => void;
   updateTable: (id: string, updates: Partial<Table>) => void;
@@ -19,9 +21,18 @@ interface SchemaStore {
   updateRelationship: (id: string, updates: Partial<Relationship>) => void;
   deleteRelationship: (id: string) => void;
   
+  addPolicy: (tableId: string, policy: Policy) => void;
+  updatePolicy: (tableId: string, policyId: string, updates: Partial<Policy>) => void;
+  deletePolicy: (tableId: string, policyId: string) => void;
+  
   setSelectedTable: (id: string | null) => void;
   setSelectedRelationship: (id: string | null) => void;
   
+  loadDesign: (tables: Table[], relationships: Relationship[], designId?: string, designName?: string) => void;
+  clearDesign: () => void;
+  setCurrentDesign: (id: string | null, name: string | null) => void;
+  
+  // Keep localStorage methods for backward compatibility and local backup
   loadFromStorage: () => void;
   saveToStorage: () => void;
 }
@@ -31,11 +42,14 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
   relationships: [],
   selectedTable: null,
   selectedRelationship: null,
+  currentDesignId: null,
+  currentDesignName: null,
   
   addTable: (table) => {
     set((state) => ({
       tables: [...state.tables, table]
     }));
+    // Keep localStorage backup for safety
     get().saveToStorage();
   },
   
@@ -126,9 +140,82 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
     get().saveToStorage();
   },
   
+  addPolicy: (tableId, policy) => {
+    set((state) => ({
+      tables: state.tables.map(t => 
+        t.id === tableId 
+          ? { ...t, policies: [...(t.policies || []), policy] }
+          : t
+      )
+    }));
+    get().saveToStorage();
+  },
+  
+  updatePolicy: (tableId, policyId, updates) => {
+    set((state) => ({
+      tables: state.tables.map(t => 
+        t.id === tableId 
+          ? {
+              ...t,
+              policies: (t.policies || []).map(p => 
+                p.id === policyId ? { ...p, ...updates } : p
+              )
+            }
+          : t
+      )
+    }));
+    get().saveToStorage();
+  },
+  
+  deletePolicy: (tableId, policyId) => {
+    set((state) => ({
+      tables: state.tables.map(t => 
+        t.id === tableId 
+          ? {
+              ...t,
+              policies: (t.policies || []).filter(p => p.id !== policyId)
+            }
+          : t
+      )
+    }));
+    get().saveToStorage();
+  },
+  
   setSelectedTable: (id) => set({ selectedTable: id }),
   
   setSelectedRelationship: (id) => set({ selectedRelationship: id }),
+  
+  loadDesign: (tables, relationships, designId, designName) => {
+    set({
+      tables,
+      relationships,
+      currentDesignId: designId || null,
+      currentDesignName: designName || null,
+      selectedTable: null,
+      selectedRelationship: null
+    });
+    // Also save to localStorage as backup
+    get().saveToStorage();
+  },
+  
+  clearDesign: () => {
+    set({
+      tables: [],
+      relationships: [],
+      selectedTable: null,
+      selectedRelationship: null,
+      currentDesignId: null,
+      currentDesignName: null
+    });
+    get().saveToStorage();
+  },
+  
+  setCurrentDesign: (id, name) => {
+    set({
+      currentDesignId: id,
+      currentDesignName: name
+    });
+  },
   
   loadFromStorage: () => {
     try {
