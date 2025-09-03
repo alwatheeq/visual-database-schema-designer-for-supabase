@@ -136,7 +136,6 @@ SPECIFIC SUPABASE REQUIREMENTS:
 - Table names: Use public schema prefix (public.table_name)
 
 Return ONLY the SQL script with comments. No explanations or markdown formatting.`;
-}
 
   const userPrompt = `Generate a complete, production-ready Supabase migration script for this database schema:
 
@@ -261,3 +260,4 @@ function prepareDetailedSchemaDescription(tables: any[], relationships: any[]): 
   }
   
   return description;
+}
