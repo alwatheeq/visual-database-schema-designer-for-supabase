@@ -5,7 +5,10 @@ import { Database, Key, Link, Shield, Hash } from 'lucide-react';
 import clsx from 'clsx';
 
 interface TableNodeProps {
-  data: Table;
+  data: Table & {
+    highlightedField?: string | null;
+    highlightType?: 'source' | 'target' | null;
+  };
   selected?: boolean;
 }
 
@@ -217,6 +220,12 @@ export default function TableNode({ data, selected }: TableNodeProps) {
                     : field.isPrimaryKey 
                     ? 'bg-amber-50 hover:bg-amber-100 border border-amber-200'
                     : 'bg-white hover:bg-gray-50 border border-transparent',
+                  // Relationship highlighting
+                  data.highlightedField === field.id && data.highlightType === 'source' 
+                    ? '!bg-green-100 !border-green-400 shadow-lg ring-2 ring-green-300'
+                    : data.highlightedField === field.id && data.highlightType === 'target'
+                    ? '!bg-purple-100 !border-purple-400 shadow-lg ring-2 ring-purple-300'
+                    : '',
                   // Drag states
                   draggedField === field.id ? 'opacity-50 cursor-grabbing' : 'cursor-grab',
                   dragOverField === field.id && draggedField !== field.id && '!bg-green-100 !border-green-400 shadow-md',
@@ -238,6 +247,8 @@ export default function TableNode({ data, selected }: TableNodeProps) {
                     'font-medium transition-colors',
                     field.isPrimaryKey && 'text-amber-800',
                     field.isForeignKey && 'text-blue-800',
+                    data.highlightedField === field.id && data.highlightType === 'source' && 'text-green-800 font-bold',
+                    data.highlightedField === field.id && data.highlightType === 'target' && 'text-purple-800 font-bold',
                     !field.isPrimaryKey && !field.isForeignKey && 'text-gray-700'
                   )}>
                     {field.name}
@@ -245,7 +256,9 @@ export default function TableNode({ data, selected }: TableNodeProps) {
                 </div>
                 <span className={clsx(
                   'text-xs',
-                  field.isForeignKey ? 'text-blue-600' : 'text-gray-500'
+                  field.isForeignKey ? 'text-blue-600' : 'text-gray-500',
+                  data.highlightedField === field.id && data.highlightType === 'source' && 'text-green-600 font-semibold',
+                  data.highlightedField === field.id && data.highlightType === 'target' && 'text-purple-600 font-semibold'
                 )}>
                   {field.type}
                 </span>

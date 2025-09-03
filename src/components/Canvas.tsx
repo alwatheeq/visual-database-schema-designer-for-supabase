@@ -31,13 +31,28 @@ export default function Canvas() {
   const { tables, relationships, updateTable, addRelationship, addField, setSelectedTable, setSelectedRelationship } = useSchemaStore();
 
   const nodes = useMemo(() => {
+    // Get selected relationship data for highlighting
+    const selectedRel = relationships.find(rel => rel.id === selectedRelationship);
+    
     return tables.map((table) => ({
       id: table.id,
       type: 'table',
       position: table.position,
-      data: table,
+      data: {
+        ...table,
+        highlightedField: selectedRel ? (
+          selectedRel.source === table.id ? selectedRel.sourceField :
+          selectedRel.target === table.id ? selectedRel.targetField :
+          null
+        ) : null,
+        highlightType: selectedRel ? (
+          selectedRel.source === table.id ? 'source' :
+          selectedRel.target === table.id ? 'target' :
+          null
+        ) : null,
+      },
     }));
-  }, [tables]);
+  }, [tables, relationships, selectedRelationship]);
 
   const edges = useMemo(() => {
     return relationships.map((rel) => ({
