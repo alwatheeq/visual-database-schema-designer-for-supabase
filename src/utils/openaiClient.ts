@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
 if (apiKey && apiKey.trim() && !apiKey.startsWith('your-api-key')) {
-  console.log('✅ OpenAI API key found and configured:', apiKey.substring(0, 20) + '...');
+  console.log('✅ OpenAI API key found and configured');
 } else {
   console.warn('⚠️ OpenAI API key not configured or invalid');
 }
@@ -14,30 +14,6 @@ export const openai = apiKey ? new OpenAI({
   dangerouslyAllowBrowser: true
 }) : null;
 
-// Test OpenAI connection
-export async function testOpenAIConnection(): Promise<boolean> {
-  if (!openai) {
-    console.warn('OpenAI client not initialized');
-    return false;
-  }
-
-  try {
-    console.log('Testing OpenAI connection...');
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: 'Say "connection successful"' }],
-      max_tokens: 10,
-      temperature: 0
-    });
-    
-    const result = response.choices[0]?.message?.content?.includes('connection successful');
-    console.log('OpenAI connection test:', result ? '✅ Success' : '❌ Failed');
-    return result || false;
-  } catch (error) {
-    console.error('OpenAI connection test failed:', error);
-    return false;
-  }
-}
 // Enhanced schema modification with better error handling
 export async function modifySchemaWithAI(
   currentSchema: { tables: any[], relationships: any[] },
@@ -126,7 +102,7 @@ export async function generateSupabaseScriptWithAI(
 
   const schemaDescription = prepareDetailedSchemaDescription(tables, relationships);
   
-  const systemPrompt = `You are an expert Supabase database engineer who generates production-ready PostgreSQL migration scripts using public schema.
+  const systemPrompt = `You are an expert Supabase database engineer who generates production-ready PostgreSQL migration scripts.
 
 CRITICAL REQUIREMENTS:
 1. Generate COMPLETE, executable Supabase PostgreSQL migration scripts
@@ -135,15 +111,12 @@ CRITICAL REQUIREMENTS:
 4. Use proper UUID primary keys with gen_random_uuid() default
 5. Include created_at and updated_at timestamptz fields with now() defaults
 6. Enable Row Level Security (RLS) where specified
-7. Create comprehensive RLS policies using auth.uid() for authenticated users
+7. Create comprehensive RLS policies using auth.uid()
 8. Add proper foreign key constraints with CASCADE actions
 9. Create indexes for all foreign key columns for performance
 10. Use snake_case naming convention throughout
 11. Include comprehensive comments explaining each section
 12. Add triggers for updated_at automation
-13. ALL tables must use public schema (public.table_name)
-14. Use proper PostgreSQL data types that work in Supabase
-15. Include complete migration summary in header comment
 
 STRUCTURE YOUR OUTPUT AS:
 1. Header comment with migration overview and table list
@@ -161,9 +134,6 @@ SPECIFIC SUPABASE REQUIREMENTS:
 - RLS policies: Use auth.uid() for user-based access control
 - Comments: Include detailed explanations for each section
 - Table names: Use public schema prefix (public.table_name)
-- Enable RLS on ALL tables by default
-- Create basic authenticated user policies for all tables
-- Include proper foreign key constraint naming
 
 Return ONLY the SQL script with comments. No explanations or markdown formatting.`;
 
@@ -179,14 +149,10 @@ Requirements:
 - Include updated_at triggers for timestamp automation
 - Use proper CASCADE actions for data integrity
 - Add detailed comments explaining each section
-- Create standard authenticated user policies for all tables
-- Use Supabase best practices for all SQL statements
-- Ensure script can be run directly in Supabase SQL editor
 
 Generate a script that can be run directly in Supabase SQL editor.`;
 
   try {
-    console.log('📤 Sending request to OpenAI with enhanced prompts...');
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -205,22 +171,7 @@ Generate a script that can be run directly in Supabase SQL editor.`;
       throw new Error('Generated script missing table creation statements');
     }
     
-    if (!script.includes('ENABLE ROW LEVEL SECURITY') && tables.some(t => t.enableRLS)) {
-      console.warn('⚠️ Generated script missing RLS configuration');
-    }
-    
-    if (!script.includes('CREATE POLICY') && tables.some(t => t.enableRLS)) {
-      console.warn('⚠️ Generated script missing RLS policies');
-    }
-    
     console.log('✅ OpenAI generated Supabase SQL script successfully');
-    console.log('📊 Script stats:', {
-      length: script.length,
-      tableCount: (script.match(/CREATE TABLE/g) || []).length,
-      policyCount: (script.match(/CREATE POLICY/g) || []).length,
-      indexCount: (script.match(/CREATE INDEX/g) || []).length
-    });
-    
     return script;
   } catch (error) {
     console.error('❌ OpenAI generation failed:', error);
@@ -245,7 +196,7 @@ function prepareDetailedSchemaDescription(tables: any[], relationships: any[]): 
   tables.forEach((table, index) => {
     description += `TABLE ${index + 1}: ${table.name}\n`;
     if (table.description) {
-      description += `├─ Purpose: ${table.description}\n`;
+      description += `├─ Description: ${table.description}\n`;
     }
     description += `├─ RLS Required: ${table.enableRLS ? 'YES' : 'NO'}\n`;
     description += `├─ Total Fields: ${table.fields.length}\n`;

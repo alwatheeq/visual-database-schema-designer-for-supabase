@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSchemaStore } from '../store/schemaStore';
-import { Plus, Trash2, Edit2, Save, Shield, ArrowRight, Link2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, Shield } from 'lucide-react';
 import { FIELD_TYPES, DEFAULT_VALUE_SUGGESTIONS } from '../types/schema';
 import PolicyEditor from './PolicyEditor';
 import toast from 'react-hot-toast';
@@ -11,7 +11,6 @@ export default function Sidebar() {
     relationships,
     selectedTable,
     selectedRelationship,
-    setSelectedRelationship,
     updateTable,
     deleteTable,
     addField,
@@ -53,60 +52,6 @@ export default function Sidebar() {
 
   const getDefaultValueSuggestions = (fieldType: string) => {
     return DEFAULT_VALUE_SUGGESTIONS[fieldType] || [];
-  };
-
-  // Get relationships involving the selected table
-  const getTableRelationships = () => {
-    if (!selectedTableData) return [];
-    
-    return relationships.filter(rel => 
-      rel.source === selectedTableData.id || rel.target === selectedTableData.id
-    );
-  };
-
-  const getRelationshipDisplay = (relationship: any) => {
-    const isSource = relationship.source === selectedTableData?.id;
-    const connectedTableId = isSource ? relationship.target : relationship.source;
-    const connectedTable = tables.find(t => t.id === connectedTableId);
-    
-    const sourceField = selectedTableData?.fields.find(f => f.id === relationship.sourceField);
-    const targetField = tables.find(t => t.id === relationship.target)?.fields.find(f => f.id === relationship.targetField);
-    
-    if (isSource) {
-      return {
-        direction: 'outgoing',
-        connectedTable: connectedTable?.name || 'Unknown',
-        fieldConnection: `${sourceField?.name || 'unknown'} → ${connectedTable?.name}.${targetField?.name || 'unknown'}`,
-        type: relationship.type,
-        relationshipId: relationship.id
-      };
-    } else {
-      return {
-        direction: 'incoming',
-        connectedTable: connectedTable?.name || 'Unknown',
-        fieldConnection: `${connectedTable?.name}.${sourceField?.name || 'unknown'} → ${targetField?.name || 'unknown'}`,
-        type: relationship.type,
-        relationshipId: relationship.id
-      };
-    }
-  };
-
-  const getRelationshipTypeLabel = (type: string) => {
-    switch (type) {
-      case 'one-to-one': return '1:1';
-      case 'one-to-many': return '1:N';
-      case 'many-to-many': return 'N:N';
-      default: return type;
-    }
-  };
-
-  const getRelationshipTypeColor = (type: string) => {
-    switch (type) {
-      case 'one-to-one': return 'bg-blue-100 text-blue-800';
-      case 'one-to-many': return 'bg-green-100 text-green-800';
-      case 'many-to-many': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
   };
 
   // Show empty state when nothing is selected
@@ -359,74 +304,6 @@ export default function Sidebar() {
                 Add Field
               </button>
             </div>
-          </div>
-
-          {/* Current Relationships */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-              <Link2 size={16} />
-              Current Relationships ({getTableRelationships().length})
-            </h4>
-            
-            {getTableRelationships().length === 0 ? (
-              <div className="text-center py-3 text-gray-500 text-sm bg-gray-50 rounded-lg">
-                <Link2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                No relationships defined
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {getTableRelationships().map((rel) => {
-                  const display = getRelationshipDisplay(rel);
-                  return (
-                    <div
-                      key={rel.id}
-                      className={`p-3 rounded-lg border transition-colors cursor-pointer hover:border-blue-300 ${
-                        selectedRelationship === rel.id 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200 bg-gray-50'
-                      }`}
-                      onClick={() => setSelectedRelationship(rel.id)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getRelationshipTypeColor(display.type)}`}>
-                            {getRelationshipTypeLabel(display.type)}
-                          </span>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            display.direction === 'outgoing' 
-                              ? 'bg-amber-100 text-amber-800' 
-                              : 'bg-indigo-100 text-indigo-800'
-                          }`}>
-                            {display.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}
-                          </span>
-                        </div>
-                        <ArrowRight size={14} className="text-gray-400" />
-                      </div>
-                      
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-800 mb-1">
-                          → {display.connectedTable}
-                        </div>
-                        <div className="text-xs text-gray-600 font-mono">
-                          {display.fieldConnection}
-                        </div>
-                      </div>
-                      
-                      {rel.onDelete && (
-                        <div className="mt-2 text-xs text-gray-500">
-                          On Delete: <span className="font-medium">{rel.onDelete}</span>
-                          {rel.onUpdate && (
-                            <span className="ml-2">
-                              On Update: <span className="font-medium">{rel.onUpdate}</span>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           {/* RLS Policy Editor */}

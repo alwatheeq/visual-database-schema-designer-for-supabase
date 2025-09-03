@@ -27,10 +27,8 @@ export default function ScriptModal({ onClose }: ScriptModalProps) {
           setScript(generatedScript);
           console.log('✅ Supabase SQL script generated successfully');
         } else {
-          console.log('🎯 User requested Bolt prompt generation via OpenAI');
-          const prompt = await generateBoltPrompt({ tables, relationships });
+          const prompt = generateBoltPrompt({ tables, relationships });
           setScript(prompt);
-          console.log('✅ Bolt prompt generated successfully');
         }
       } catch (err) {
         console.error('Script generation error:', err);
