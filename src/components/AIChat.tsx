@@ -9,7 +9,7 @@ interface AIChatProps {
 }
 
 export default function AIChat({ onClose }: AIChatProps) {
-  const { tables, relationships, loadSchema } = useSchemaStore();
+  const { tables, relationships, loadDesign } = useSchemaStore();
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function AIChat({ onClose }: AIChatProps) {
         message
       );
       
-      loadSchema(modifiedSchema.tables, modifiedSchema.relationships);
+      loadDesign(modifiedSchema.tables, modifiedSchema.relationships);
       toast.success('Schema updated successfully!');
       setMessage('');
     } catch (err) {
