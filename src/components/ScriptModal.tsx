@@ -22,16 +22,26 @@ export default function ScriptModal({ onClose }: ScriptModalProps) {
       
       try {
         if (activeTab === 'supabase') {
+          console.log('🎯 User requested Supabase SQL generation via OpenAI');
           const generatedScript = await generateSupabaseScript({ tables, relationships });
           setScript(generatedScript);
+          console.log('✅ Supabase SQL script generated successfully');
         } else {
           const prompt = generateBoltPrompt({ tables, relationships });
           setScript(prompt);
         }
       } catch (err) {
         console.error('Script generation error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to generate script');
-        toast.error('Failed to generate script. Check your OpenAI API key.');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to generate script';
+        setError(errorMessage);
+        
+        if (errorMessage.includes('API key')) {
+          toast.error('OpenAI API key not configured. Add VITE_OPENAI_API_KEY to your .env file.');
+        } else if (errorMessage.includes('quota')) {
+          toast.error('OpenAI API quota exceeded. Check your usage limits.');
+        } else {
+          toast.error('Failed to generate script. Using fallback generation.');
+        }
       } finally {
         setIsGenerating(false);
       }

@@ -1,5 +1,5 @@
 import { Schema, Table, Field, Relationship } from '../types/schema';
-import { openai } from './openaiClient';
+import { openai, generateSupabaseScriptWithAI } from './openaiClient';
 
 export async function generateSupabaseScript(schema: Schema): Promise<string> {
   const { tables, relationships } = schema;
@@ -8,165 +8,22 @@ export async function generateSupabaseScript(schema: Schema): Promise<string> {
     return '-- No tables defined';
   }
 
-  // If OpenAI is not configured, fall back to manual generation
+  console.log('🚀 Starting Supabase SQL script generation...');
+  console.log('📊 Schema:', { tables: tables.length, relationships: relationships.length });
+  
+  // Try OpenAI generation first
   if (!openai) {
-    console.warn('OpenAI not configured, falling back to manual generation');
+    console.warn('⚠️ OpenAI not configured, using manual generation');
     return generateManualSupabaseScript(schema);
   }
 
   try {
-    // Prepare the schema description for OpenAI
-    const schemaDescription = prepareSchemaDescription(schema);
-    
-    const systemPrompt = `You are an expert Supabase database engineer. Generate production-ready PostgreSQL migration scripts that follow Supabase conventions and best practices.
-
-CRITICAL REQUIREMENTS:
-1. Use PostgreSQL syntax compatible with Supabase
-2. Always include "IF NOT EXISTS" or "IF EXISTS" for safety
-3. Use proper UUID primary keys with gen_random_uuid() default
-4. Include created_at and updated_at timestamptz fields with now() defaults
-5. Enable Row Level Security (RLS) where specified
-6. Create comprehensive RLS policies using auth.uid()
-7. Add proper foreign key constraints with CASCADE actions
-8. Create indexes for all foreign key columns for performance
-9. Use snake_case naming convention
-10. Include comprehensive comments explaining each section
-
-STRUCTURE YOUR OUTPUT AS:
-1. Header comment with migration overview
-2. CREATE TABLE statements (with all columns and defaults)
-3. Foreign key constraints (separate ALTER TABLE statements)
-4. RLS configuration (ALTER TABLE ENABLE RLS)
-5. RLS policies (CREATE POLICY statements)
-6. Performance indexes (CREATE INDEX statements)
-7. Triggers for updated_at automation
-
-SPECIFIC REQUIREMENTS:
-- Primary keys: Always uuid DEFAULT gen_random_uuid()
-- Timestamps: Always timestamptz DEFAULT now()
-- Foreign keys: Include proper naming and CASCADE options
-- RLS policies: Use auth.uid() for user-based access control
-- Comments: Include detailed explanations for each section
-
-Return ONLY the SQL script, no explanations.`;
-
-    const userPrompt = `Generate a complete, production-ready Supabase migration script for the following database schema.
-
-Pay special attention to:
-- Proper UUID primary key setup
-- Comprehensive RLS policies for data security
-- Foreign key relationships with proper constraints
-- Performance indexes
-- Updated_at trigger automation
-
-Schema Definition:
-${schemaDescription}
-
-Generate a complete migration that can be run directly in Supabase SQL editor.`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.1,
-      max_tokens: 4000,
-    });
-
-    const script = response.choices[0].message.content;
-    if (!script) throw new Error('No response from OpenAI');
-    
-    // Validate the generated script has essential components
-    if (!script.includes('CREATE TABLE') && tables.length > 0) {
-      throw new Error('Generated script missing table creation statements');
-    }
-    
-    console.log('✅ OpenAI generated Supabase SQL script successfully');
-    return script;
+    // Use the enhanced OpenAI generation
+    return await generateSupabaseScriptWithAI(tables, relationships);
   } catch (error) {
-    console.error('❌ OpenAI generation failed:', error);
-    console.log('🔄 Falling back to manual generation...');
-    
-    // Provide more specific error feedback
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    if (errorMessage.includes('API key')) {
-      console.error('🔑 OpenAI API key issue detected');
-    }
-    
+    console.error('❌ OpenAI generation failed, falling back to manual generation:', error);
     return generateManualSupabaseScript(schema);
   }
-}
-
-function prepareSchemaDescription(schema: Schema): string {
-  const { tables, relationships } = schema;
-  
-  let description = 'DATABASE SCHEMA SPECIFICATION:\n\n';
-  description += `Total Tables: ${tables.length}\n`;
-  description += `Total Relationships: ${relationships.length}\n\n`;
-  description += 'TABLES DEFINITION:\n\n';
-  
-  tables.forEach((table) => {
-    description += `TABLE: ${table.name}\n`;
-    description += `- RLS Required: ${table.enableRLS ? 'YES' : 'NO'}\n`;
-    description += `- Total Fields: ${table.fields.length}\n`;
-    description += `- Color Theme: ${table.color}\n`;
-    description += 'FIELDS:\n';
-    
-    table.fields.forEach((field) => {
-      description += `  * ${field.name}:\n`;
-      description += `    - Type: ${field.type}\n`;
-      description += `    - Primary Key: ${field.isPrimaryKey ? 'YES' : 'NO'}\n`;
-      description += `    - Foreign Key: ${field.isForeignKey ? 'YES' : 'NO'}\n`;
-      description += `    - Unique: ${field.isUnique ? 'YES' : 'NO'}\n`;
-      description += `    - Nullable: ${field.isNullable ? 'YES' : 'NO'}\n`;
-      
-      if (field.defaultValue) {
-        description += `    - Default Value: ${field.defaultValue}\n`;
-      }
-      
-      if (field.references) {
-        description += `    - References: ${field.references.table}.${field.references.field}\n`;
-      }
-    });
-    
-    if (table.enableRLS && table.policies && table.policies.length > 0) {
-      description += 'RLS POLICIES:\n';
-      table.policies.forEach((policy) => {
-        description += `  * ${policy.name}:\n`;
-        description += `    - Command: ${policy.command}\n`;
-        description += `    - Role: ${policy.role}\n`;
-        if (policy.using) description += ` USING (${policy.using})`;
-        if (policy.check) description += ` WITH CHECK (${policy.check})`;
-        description += '\n';
-      });
-    } else if (table.enableRLS) {
-      description += 'RLS POLICIES: CREATE STANDARD AUTH-BASED POLICIES\n';
-    }
-    
-    description += '\n---\n\n';
-  });
-  
-  if (relationships.length > 0) {
-    description += 'RELATIONSHIPS DEFINITION:\n\n';
-    relationships.forEach((rel) => {
-      const sourceTable = tables.find(t => t.id === rel.source);
-      const targetTable = tables.find(t => t.id === rel.target);
-      const sourceField = sourceTable?.fields.find(f => f.id === rel.sourceField);
-      const targetField = targetTable?.fields.find(f => f.id === rel.targetField);
-      
-      if (sourceTable && targetTable && sourceField && targetField) {
-        description += `RELATIONSHIP: ${sourceTable.name}.${sourceField.name} → ${targetTable.name}.${targetField.name}\n`;
-        description += `- Type: ${rel.type}\n`;
-        description += `- Source: ${sourceTable.name}.${sourceField.name} (${sourceField.type})\n`;
-        description += `- Target: ${targetTable.name}.${targetField.name} (${targetField.type})\n`;
-        description += `- On Delete: ${rel.onDelete || 'CASCADE'}\n`;
-        description += `- On Update: ${rel.onUpdate || 'CASCADE'}\n\n`;
-      }
-    });
-  }
-  
-  return description;
 }
 
 function generateManualSupabaseScript(schema: Schema): string {
