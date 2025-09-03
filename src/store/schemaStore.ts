@@ -6,6 +6,7 @@ interface SchemaStore {
   relationships: Relationship[];
   selectedTable: string | null;
   selectedRelationship: string | null;
+  highlightedFields: Set<string>;
   currentDesignId: string | null;
   currentDesignName: string | null;
   
@@ -27,6 +28,7 @@ interface SchemaStore {
   
   setSelectedTable: (id: string | null) => void;
   setSelectedRelationship: (id: string | null) => void;
+  setHighlightedFields: (fields: Set<string>) => void;
   
   loadDesign: (tables: Table[], relationships: Relationship[], designId?: string, designName?: string) => void;
   clearDesign: () => void;
@@ -35,6 +37,7 @@ interface SchemaStore {
   // Keep localStorage methods for backward compatibility and local backup
   loadFromStorage: () => void;
   saveToStorage: () => void;
+  loadSchema: (tables: Table[], relationships: Relationship[]) => void;
 }
 
 export const useSchemaStore = create<SchemaStore>((set, get) => ({
@@ -42,6 +45,7 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
   relationships: [],
   selectedTable: null,
   selectedRelationship: null,
+  highlightedFields: new Set(),
   currentDesignId: null,
   currentDesignName: null,
   
@@ -205,6 +209,8 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
       selectedTable: null,
       selectedRelationship: null,
       currentDesignId: null,
+  setHighlightedFields: (fields) => set({ highlightedFields: fields }),
+      highlightedFields: new Set()
       currentDesignName: null
     });
     get().saveToStorage();
@@ -212,11 +218,22 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
   
   setCurrentDesign: (id, name) => {
     set({
+      highlightedFields: new Set(),
       currentDesignId: id,
       currentDesignName: name
     });
   },
   
+  loadSchema: (tables, relationships) => {
+    set({
+      tables,
+      relationships,
+      selectedTable: null,
+      selectedRelationship: null,
+      highlightedFields: new Set()
+    });
+    get().saveToStorage();
+  }
   loadFromStorage: () => {
     try {
       const stored = localStorage.getItem('database-schema');
