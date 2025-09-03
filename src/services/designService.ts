@@ -186,7 +186,7 @@ export class DesignService {
       // First test basic connectivity
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      if (authError && authError.message !== 'Invalid JWT') {
+      if (authError && authError.message !== 'Invalid JWT' && authError.message !== 'Auth session missing!') {
         console.error('Connection test failed (auth check):', authError);
         return false;
       }
