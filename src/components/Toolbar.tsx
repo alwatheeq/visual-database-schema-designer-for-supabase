@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Database, Download, Bot, Save, Upload, Plus, FileCode, FolderOpen, LogIn } from 'lucide-react';
+import { Database, Download, Bot, Save, Upload, Plus, FileCode, FolderOpen, LogIn, FileUp } from 'lucide-react';
 import { useSchemaStore } from '../store/schemaStore';
 import { useAuthStore } from '../store/authStore';
+import { convertExternalSchema } from '../utils/schemaImporter';
 import SaveDesignModal from './SaveDesignModal';
 import LoadDesignModal from './LoadDesignModal';
 import AuthModal from './AuthModal';
@@ -117,6 +118,54 @@ const Toolbar: React.FC<ToolbarProps> = ({ onGenerateScript, onToggleAI }) => {
     input.click();
   };
 
+  const handleImportExternalSchema = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const externalSchema = JSON.parse(text);
+        
+        // Check if this is an external schema format
+        if (externalSchema.tables && Array.isArray(externalSchema.tables) && 
+            externalSchema.relationships && Array.isArray(externalSchema.relationships)) {
+          
+          // Try to detect if it's our internal format or external format
+          const firstTable = externalSchema.tables[0];
+          if (firstTable && ('fromTable' in (externalSchema.relationships[0] || {}) || 
+              'toTable' in (externalSchema.relationships[0] || {}))) {
+            // This looks like an external schema format
+            const converted = convertExternalSchema(externalSchema);
+            useSchemaStore.setState({
+              tables: converted.tables,
+              relationships: converted.relationships
+            });
+            toast.success('External schema imported and converted successfully');
+          } else {
+            // This is our internal format
+            useSchemaStore.setState({
+              tables: externalSchema.tables,
+              relationships: externalSchema.relationships
+            });
+            toast.success('Schema imported successfully');
+          }
+        } else {
+          toast.error('Invalid schema file format');
+        }
+      } catch (error) {
+        console.error('Import error:', error);
+        toast.error('Failed to import schema - invalid JSON format');
+      }
+    };
+    
+    input.click();
+  };
+
   const handleSaveToLocal = () => {
     // Save to localStorage
     const schemaData = {
@@ -219,6 +268,15 @@ const Toolbar: React.FC<ToolbarProps> = ({ onGenerateScript, onToggleAI }) => {
             >
               <Upload className="w-4 h-4 mr-2" />
               Import
+            </button>
+            
+            <button
+              onClick={handleImportExternalSchema}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              title="Import External Schema"
+            >
+              <FileUp className="w-4 h-4 mr-2" />
+              Import External
             </button>
             
             <button

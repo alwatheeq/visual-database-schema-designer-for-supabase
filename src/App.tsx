@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast';
 import { useSchemaStore } from './store/schemaStore';
 import { useAuthStore } from './store/authStore';
 import { DesignService } from './services/designService';
+import { autoLoadProvidedSchema } from './utils/schemaImporter';
 import toast from 'react-hot-toast';
 
 function App() {
@@ -19,6 +20,11 @@ function App() {
   // Check authentication on mount
   useEffect(() => {
     checkAuth();
+    
+    // Auto-load the provided schema
+    setTimeout(() => {
+      autoLoadProvidedSchema();
+    }, 1000);
   }, []);
 
   // Test database connection on mount
