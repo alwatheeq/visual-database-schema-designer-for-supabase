@@ -28,7 +28,7 @@ const edgeTypes: EdgeTypes = {
 };
 
 export default function Canvas() {
-  const { tables, relationships, updateTable, addRelationship, addField, setSelectedTable, setSelectedRelationship } = useSchemaStore();
+  const { tables, relationships, updateTable, addRelationship, addField, setSelectedTable, setSelectedRelationship, selectedRelationship } = useSchemaStore();
 
   const nodes = useMemo(() => {
     // Get selected relationship data for highlighting
