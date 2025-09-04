@@ -61,6 +61,7 @@ export default function CustomEdge({
         style={{
           stroke: selected ? '#3B82F6' : '#6B7280',
           strokeWidth: selected ? 3 : 2,
+          strokeDasharray: selected ? 'none' : 'none',
         }}
       />
       <EdgeLabelRenderer>

@@ -67,12 +67,14 @@ export default function Canvas() {
         type: MarkerType.ArrowClosed,
         width: 20,
         height: 20,
+        color: selectedRelationship === rel.id ? '#3B82F6' : '#6B7280',
       },
       style: {
-        strokeWidth: 2,
+        strokeWidth: selectedRelationship === rel.id ? 3 : 2,
+        stroke: selectedRelationship === rel.id ? '#3B82F6' : '#6B7280',
       },
     }));
-  }, [relationships]);
+  }, [relationships, selectedRelationship]);
 
   const [nodesState, setNodes, onNodesChange] = useNodesState(nodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(edges);
