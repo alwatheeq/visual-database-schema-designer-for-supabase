@@ -142,6 +142,8 @@ CRITICAL REQUIREMENTS:
 10. Use snake_case naming convention throughout
 11. Include comprehensive comments explaining each section
 12. Add triggers for updated_at automation
+13. NEVER create or alter system tables like auth.users - they already exist in Supabase
+14. Only reference system tables in foreign key constraints, never create them
 
 STRUCTURE YOUR OUTPUT AS:
 1. Header comment with migration overview and table list
@@ -159,6 +161,8 @@ SPECIFIC SUPABASE REQUIREMENTS:
 - RLS policies: Use auth.uid() for user-based access control
 - Comments: Include detailed explanations for each section
 - Table names: Use public schema prefix (public.table_name)
+- System tables: Reference auth.users without schema prefix in foreign keys
+- NEVER generate CREATE TABLE or ALTER TABLE statements for auth.users or other system tables
 
 Return ONLY the SQL script with comments. No explanations or markdown formatting.`;
 
@@ -213,12 +217,27 @@ Generate a script that can be run directly in Supabase SQL editor.`;
 }
 
 function prepareDetailedSchemaDescription(tables: any[], relationships: any[]): string {
+  // Separate user tables from system tables
+  const userTables = tables.filter(table => !(table as any).isSystemTable && table.name !== 'auth.users');
+  const systemTables = tables.filter(table => (table as any).isSystemTable || table.name === 'auth.users');
+  
   let description = '=== DATABASE SCHEMA SPECIFICATION ===\n\n';
-  description += `📊 Overview: ${tables.length} tables, ${relationships.length} relationships\n\n`;
+  description += `📊 Overview: ${userTables.length} user tables, ${systemTables.length} system tables (reference only), ${relationships.length} relationships\n\n`;
   
-  description += '🗄️ TABLES DETAILED SPECIFICATION:\n\n';
+  if (systemTables.length > 0) {
+    description += '🔒 SYSTEM TABLES (DO NOT CREATE - REFERENCE ONLY):\n\n';
+    systemTables.forEach((table) => {
+      description += `SYSTEM TABLE: ${table.name}\n`;
+      description += `├─ Purpose: Already exists in Supabase\n`;
+      description += `├─ Action: DO NOT CREATE OR ALTER\n`;
+      description += `└─ Usage: Reference in foreign key constraints only\n\n`;
+    });
+    description += '─'.repeat(60) + '\n\n';
+  }
   
-  tables.forEach((table, index) => {
+  description += '🗄️ USER TABLES DETAILED SPECIFICATION (TO BE CREATED):\n\n';
+  
+  userTables.forEach((table, index) => {
     description += `TABLE ${index + 1}: ${table.name}\n`;
     if (table.description) {
       description += `├─ Description: ${table.description}\n`;
