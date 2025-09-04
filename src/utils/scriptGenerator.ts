@@ -31,8 +31,6 @@ function generateManualSupabaseScript(schema: Schema): string {
   
   let script = `/*
 # Database Schema Migration
-
-## Summary
 This migration creates ${tables.length} table(s) with ${relationships.length} relationship(s).
 
 ## Tables
