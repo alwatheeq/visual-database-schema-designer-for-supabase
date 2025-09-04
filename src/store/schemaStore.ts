@@ -54,6 +54,9 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
   },
   
   updateTable: (id, updates) => {
+    // Don't allow updating the auth.users system table
+    if (id === 'auth-users-table') return;
+    
     set((state) => ({
       tables: state.tables.map(t => t.id === id ? { ...t, ...updates } : t)
     }));
@@ -61,6 +64,9 @@ export const useSchemaStore = create<SchemaStore>((set, get) => ({
   },
   
   deleteTable: (id) => {
+    // Don't allow deleting the auth.users system table
+    if (id === 'auth-users-table') return;
+    
     set((state) => ({
       tables: state.tables.filter(t => t.id !== id),
       relationships: state.relationships.filter(r => r.source !== id && r.target !== id),

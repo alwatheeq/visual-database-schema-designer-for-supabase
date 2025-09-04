@@ -29,6 +29,8 @@ export default function Sidebar() {
   const selectedTableData = tables.find((t) => t.id === selectedTable);
   const selectedRelationshipData = relationships.find((r) => r.id === selectedRelationship);
 
+  // Check if selected table is a system table
+  const isSystemTable = selectedTableData && ((selectedTableData as any).isSystemTable || selectedTableData.name === 'auth.users');
   const handleAddField = () => {
     if (!selectedTable || !newFieldName) return;
     
@@ -78,6 +80,15 @@ export default function Sidebar() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-800">
               {editingTable === selectedTable ? (
+                isSystemTable ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      {selectedTableData.name}
+                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">System Table</span>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">This is a Supabase system table and cannot be edited directly</div>
+                  </div>
+                ) : (
                 <div className="space-y-2">
                   <input
                     type="text"
@@ -95,48 +106,58 @@ export default function Sidebar() {
                     rows={2}
                   />
                 </div>
+                )
               ) : (
                 <div>
-                  <div>{selectedTableData.name}</div>
+                  <div className="flex items-center gap-2">
+                    {selectedTableData.name}
+                    {isSystemTable && (
+                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">System</span>
+                    )}
+                  </div>
                   {selectedTableData.description && (
                     <div className="text-sm text-gray-600 mt-1">{selectedTableData.description}</div>
                   )}
                 </div>
               )}
             </h3>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setEditingTable(editingTable === selectedTable ? null : selectedTable)}
-                className="p-1 hover:bg-gray-100 rounded"
-                title={editingTable === selectedTable ? "Save" : "Edit table name"}
-              >
-                {editingTable === selectedTable ? <Save size={16} /> : <Edit2 size={16} />}
-              </button>
-              <button
-                onClick={() => {
-                  deleteTable(selectedTable);
-                  toast.success('Table deleted');
-                }}
-                className="p-1 hover:bg-red-100 text-red-500 rounded"
-                title="Delete table"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
+            {!isSystemTable && (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setEditingTable(editingTable === selectedTable ? null : selectedTable)}
+                  className="p-1 hover:bg-gray-100 rounded"
+                  title={editingTable === selectedTable ? "Save" : "Edit table name"}
+                >
+                  {editingTable === selectedTable ? <Save size={16} /> : <Edit2 size={16} />}
+                </button>
+                <button
+                  onClick={() => {
+                    deleteTable(selectedTable);
+                    toast.success('Table deleted');
+                  }}
+                  className="p-1 hover:bg-red-100 text-red-500 rounded"
+                  title="Delete table"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="mb-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={selectedTableData.enableRLS}
-                onChange={(e) => updateTable(selectedTable, { enableRLS: e.target.checked })}
-                className="rounded"
-              />
-              <Shield size={14} />
-              Enable Row Level Security
-            </label>
-          </div>
+          {!isSystemTable && (
+            <div className="mb-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedTableData.enableRLS}
+                  onChange={(e) => updateTable(selectedTable, { enableRLS: e.target.checked })}
+                  className="rounded"
+                />
+                <Shield size={14} />
+                Enable Row Level Security
+              </label>
+            </div>
+          )}
 
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-gray-700">Fields</h4>
@@ -250,67 +271,81 @@ export default function Sidebar() {
               </div>
             ))}
             
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Field name"
-                    value={newFieldName}
-                    onChange={(e) => setNewFieldName(e.target.value)}
-                    className="flex-1 border rounded px-2 py-1 text-sm"
-                  />
-                  <select
-                    value={newFieldType}
-                    onChange={(e) => setNewFieldType(e.target.value)}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    {FIELD_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {!isSystemTable && (
+              <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Default value (optional)"
-                    value={newFieldDefaultValue}
-                    onChange={(e) => setNewFieldDefaultValue(e.target.value)}
-                    className="w-full border rounded px-2 py-1 text-sm"
-                  />
-                  {getDefaultValueSuggestions(newFieldType).length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {getDefaultValueSuggestions(newFieldType).map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          onClick={() => setNewFieldDefaultValue(suggestion)}
-                          className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                        >
-                          {suggestion}
-                        </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Field name"
+                      value={newFieldName}
+                      onChange={(e) => setNewFieldName(e.target.value)}
+                      className="flex-1 border rounded px-2 py-1 text-sm"
+                    />
+                    <select
+                      value={newFieldType}
+                      onChange={(e) => setNewFieldType(e.target.value)}
+                      className="border rounded px-2 py-1 text-sm"
+                    >
+                      {FIELD_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
                       ))}
-                    </div>
-                  )}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Default value (optional)"
+                      value={newFieldDefaultValue}
+                      onChange={(e) => setNewFieldDefaultValue(e.target.value)}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                    {getDefaultValueSuggestions(newFieldType).length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {getDefaultValueSuggestions(newFieldType).map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            onClick={() => setNewFieldDefaultValue(suggestion)}
+                            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
+                <button
+                  onClick={handleAddField}
+                  disabled={!newFieldName}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm mt-2"
+                >
+                  <Plus size={16} />
+                  Add Field
+                </button>
               </div>
-              <button
-                onClick={handleAddField}
-                disabled={!newFieldName}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm mt-2"
-              >
-                <Plus size={16} />
-                Add Field
-              </button>
-            </div>
+            )}
+            
+            {isSystemTable && (
+              <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                <div className="text-center text-sm text-indigo-700">
+                  <Shield className="w-5 h-5 mx-auto mb-2" />
+                  <p className="font-medium">System Table</p>
+                  <p className="text-xs mt-1">This is a Supabase auth.users system table. Fields cannot be modified, but you can create relationships to reference users.</p>
+                    </div>
+                </div>
+            )}
           </div>
 
           {/* RLS Policy Editor */}
-          <PolicyEditor 
-            tableId={selectedTable}
-            policies={selectedTableData.policies || []}
-          />
+          {!isSystemTable && (
+            <PolicyEditor 
+              tableId={selectedTable}
+              policies={selectedTableData.policies || []}
+            />
+          )}
         </div>
       )}
 
