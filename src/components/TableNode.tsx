@@ -266,25 +266,37 @@ export default function TableNode({ data, selected }: TableNodeProps) {
                   <span className="text-red-500 text-xs font-semibold">*</span>
                 )}
                 
-                {/* Drop zone indicator */}
-                {dragOverField === field.id && draggedField !== field.id && (
-                  <div className="absolute inset-0 bg-green-200 opacity-50 rounded pointer-events-none animate-pulse" />
-                )}
-                
                 <Handle
                   type="source"
                   position={Position.Right}
                   id={`${data.id}-${field.id}`}
-                  className="!w-2 !h-2 !bg-blue-500 !border-white"
-                  style={{ position: 'relative', right: -6, transform: 'none' }}
+                  className="!w-3 !h-3 !bg-blue-500 !border-2 !border-white !shadow-md opacity-0 hover:!opacity-100 transition-opacity"
+                  style={{ 
+                    position: 'absolute', 
+                    right: -6, 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    zIndex: 10
+                  }}
                 />
                 <Handle
                   type="target"
                   position={Position.Left}
                   id={`${data.id}-${field.id}`}
-                  className="!w-2 !h-2 !bg-blue-500 !border-white"
-                  style={{ position: 'relative', left: -6, transform: 'none' }}
+                  className="!w-3 !h-3 !bg-blue-500 !border-2 !border-white !shadow-md opacity-0 hover:!opacity-100 transition-opacity"
+                  style={{ 
+                    position: 'absolute', 
+                    left: -6, 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    zIndex: 10
+                  }}
                 />
+                
+                {/* Drop zone indicator */}
+                {dragOverField === field.id && draggedField !== field.id && (
+                  <div className="absolute inset-0 bg-green-200 opacity-50 rounded pointer-events-none animate-pulse" />
+                )}
               </div>
             ))}
           </div>
