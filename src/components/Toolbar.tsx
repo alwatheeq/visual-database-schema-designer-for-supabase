@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Download, Bot, Save, Upload, Plus, FileCode, FolderOpen, LogIn, FileUp, Shield } from 'lucide-react';
+import { Database, Download, Bot, Save, Upload, Plus, FileCode, FolderOpen, LogIn, FileUp } from 'lucide-react';
 import { useSchemaStore } from '../store/schemaStore';
 import { useAuthStore } from '../store/authStore';
 import { convertExternalSchema } from '../utils/schemaImporter';
@@ -68,95 +68,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ onGenerateScript, onToggleAI }) => {
     toast.success('Table added successfully');
   };
 
-  const handleAddAuthUsersTable = () => {
-    // Check if auth.users table already exists
-    const authUsersExists = tables.some(t => t.id === 'auth-users-table');
-    if (authUsersExists) {
-      toast.error('Supabase auth.users table already exists');
-      return;
-    }
-
-    const authUsersTable = {
-      id: 'auth-users-table',
-      name: 'auth.users',
-      description: 'Supabase authentication users table (system table)',
-      fields: [
-        {
-          id: 'auth-users-id',
-          name: 'id',
-          type: 'uuid',
-          isPrimaryKey: true,
-          isForeignKey: false,
-          isUnique: true,
-          isNullable: false,
-          defaultValue: 'gen_random_uuid()',
-        },
-        {
-          id: 'auth-users-email',
-          name: 'email',
-          type: 'text',
-          isPrimaryKey: false,
-          isForeignKey: false,
-          isUnique: true,
-          isNullable: true,
-        },
-        {
-          id: 'auth-users-phone',
-          name: 'phone',
-          type: 'text',
-          isPrimaryKey: false,
-          isForeignKey: false,
-          isUnique: true,
-          isNullable: true,
-        },
-        {
-          id: 'auth-users-created-at',
-          name: 'created_at',
-          type: 'timestamptz',
-          isPrimaryKey: false,
-          isForeignKey: false,
-          isUnique: false,
-          isNullable: false,
-          defaultValue: 'now()',
-        },
-        {
-          id: 'auth-users-updated-at',
-          name: 'updated_at',
-          type: 'timestamptz',
-          isPrimaryKey: false,
-          isForeignKey: false,
-          isUnique: false,
-          isNullable: false,
-          defaultValue: 'now()',
-        },
-        {
-          id: 'auth-users-email-confirmed-at',
-          name: 'email_confirmed_at',
-          type: 'timestamptz',
-          isPrimaryKey: false,
-          isForeignKey: false,
-          isUnique: false,
-          isNullable: true,
-        },
-        {
-          id: 'auth-users-last-sign-in-at',
-          name: 'last_sign_in_at',
-          type: 'timestamptz',
-          isPrimaryKey: false,
-          isForeignKey: false,
-          isUnique: false,
-          isNullable: true,
-        },
-      ],
-      position: { x: 50, y: 50 },
-      color: '#6366F1', // Indigo color for system table
-      enableRLS: true,
-      policies: [],
-      isSystemTable: true, // Mark as system table
-    };
-    addTable(authUsersTable);
-    toast.success('Supabase auth.users table added for relationships');
-  };
   const handleExportSchema = () => {
     const schemaData = {
       tables,
@@ -304,15 +215,6 @@ const Toolbar: React.FC<ToolbarProps> = ({ onGenerateScript, onToggleAI }) => {
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Table
-              </button>
-              
-              <button
-                onClick={handleAddAuthUsersTable}
-                className="inline-flex items-center px-3 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                title="Add Supabase auth.users table for relationships"
-              >
-                <Shield className="w-4 h-4 mr-2" />
-                Auth Users
               </button>
               
               <button

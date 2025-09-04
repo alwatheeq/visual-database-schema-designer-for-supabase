@@ -31,7 +31,6 @@ export interface Table {
   color: string;
   enableRLS: boolean;
   policies?: Policy[];
-  isSystemTable?: boolean;
 }
 
 export interface Relationship {

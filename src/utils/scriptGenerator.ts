@@ -29,18 +29,14 @@ export async function generateSupabaseScript(schema: Schema): Promise<string> {
 function generateManualSupabaseScript(schema: Schema): string {
   const { tables, relationships } = schema;
   
-  // Filter out system tables (like auth.users) from script generation
-  const userTables = tables.filter(table => !(table as any).isSystemTable && table.name !== 'auth.users');
-  
   let script = `/*
 # Database Schema Migration
-This migration creates ${userTables.length} table(s) with ${relationships.length} relationship(s).
+
+## Summary
+This migration creates ${tables.length} table(s) with ${relationships.length} relationship(s).
 
 ## Tables
-${userTables.map(t => `- public.${t.name}: ${t.fields.length} fields${t.enableRLS ? ' (RLS enabled)' : ''}`).join('\n')}
-${tables.length > userTables.length ? '\n## System Tables (Not Created - Already Exist)\n' + 
-  tables.filter(t => (t as any).isSystemTable || t.name === 'auth.users')
-    .map(t => `- ${t.name}: Referenced in relationships`).join('\n') : ''}
+${tables.map(t => `- public.${t.name}: ${t.fields.length} fields${t.enableRLS ? ' (RLS enabled)' : ''}`).join('\n')}
 
 ## Relationships
 ${relationships.length > 0 ? relationships.map(r => {
@@ -55,7 +51,7 @@ ${relationships.length > 0 ? relationships.map(r => {
 `;
 
   // Generate CREATE TABLE statements with public schema
-  userTables.forEach((table) => {
+  tables.forEach((table) => {
     script += `-- Create ${table.name} table\n`;
     script += `CREATE TABLE IF NOT EXISTS public.${table.name} (\n`;
     
@@ -108,27 +104,17 @@ ${relationships.length > 0 ? relationships.map(r => {
     const targetField = targetTable?.fields.find(f => f.id === rel.targetField);
     
     if (sourceTable && targetTable && sourceField && targetField) {
-      // Skip ALTER TABLE commands for system tables
-      const isSourceSystemTable = (sourceTable as any).isSystemTable || sourceTable.name === 'auth.users';
-      if (isSourceSystemTable) {
-        script += `-- Skipping foreign key constraint for system table: ${sourceTable.name}\n`;
-        script += `-- Note: ${sourceTable.name}.${sourceField.name} -> ${targetTable.name}.${targetField.name} relationship exists\n\n`;
-        return;
-      }
-      
       script += `-- Add foreign key constraint for ${sourceTable.name}.${sourceField.name}\n`;
       script += `ALTER TABLE public.${sourceTable.name}\n`;
       script += `ADD CONSTRAINT ${sourceTable.name}_${sourceField.name}_fkey\n`;
       script += `FOREIGN KEY (${sourceField.name})\n`;
-      // Use correct schema reference for target table
-      const targetSchema = (targetTable as any).isSystemTable || targetTable.name === 'auth.users' ? '' : 'public.';
-      script += `REFERENCES ${targetSchema}${targetTable.name} (${targetField.name})\n`;
+      script += `REFERENCES public.${targetTable.name} (${targetField.name})\n`;
       script += `ON DELETE CASCADE;\n\n`;
     }
   });
 
   // Generate RLS policies
-  userTables.forEach((table) => {
+  tables.forEach((table) => {
     if (table.enableRLS) {
       script += `-- Enable RLS for ${table.name}\n`;
       script += `ALTER TABLE public.${table.name} ENABLE ROW LEVEL SECURITY;\n\n`;
@@ -168,8 +154,7 @@ ${relationships.length > 0 ? relationships.map(r => {
     const sourceTable = tables.find(t => t.id === rel.source);
     const sourceField = sourceTable?.fields.find(f => f.id === rel.sourceField);
     
-    // Only create indexes for user tables, not system tables
-    if (sourceTable && sourceField && !((sourceTable as any).isSystemTable || sourceTable.name === 'auth.users')) {
+    if (sourceTable && sourceField) {
       script += `-- Create index for foreign key performance\n`;
       script += `CREATE INDEX IF NOT EXISTS idx_${sourceTable.name}_${sourceField.name}\n`;
       script += `ON public.${sourceTable.name} (${sourceField.name});\n\n`;
@@ -177,10 +162,17 @@ ${relationships.length > 0 ? relationships.map(r => {
   });
 
   // Add update trigger for updated_at
-  userTables.forEach((table) => {
+  tables.forEach((table) => {
     const hasUpdatedAt = table.fields.some(f => f.name === 'updated_at');
-    if (hasUpdatedAt) {
+    if (!hasUpdatedAt) {
       script += `-- Add trigger to update updated_at timestamp\n`;
+      script += `CREATE OR REPLACE FUNCTION update_updated_at_column()\n`;
+      script += `RETURNS TRIGGER AS $$\n`;
+      script += `BEGIN\n`;
+      script += `  NEW.updated_at = now();\n`;
+      script += `  RETURN NEW;\n`;
+      script += `END;\n`;
+      script += `$$ LANGUAGE plpgsql;\n\n`;
       
       script += `CREATE TRIGGER update_${table.name}_updated_at\n`;
       script += `BEFORE UPDATE ON public.${table.name}\n`;
@@ -188,28 +180,6 @@ ${relationships.length > 0 ? relationships.map(r => {
       script += `EXECUTE FUNCTION update_updated_at_column();\n\n`;
     }
   });
-  
-  // Add the trigger function once at the end if any table has updated_at
-  const hasAnyUpdatedAt = userTables.some(table => 
-    table.fields.some(f => f.name === 'updated_at')
-  );
-  
-  if (hasAnyUpdatedAt) {
-    script = script.replace(
-      '-- Add trigger to update updated_at timestamp\n',
-      `-- Add trigger function for updated_at automation
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Add trigger to update updated_at timestamp
-`
-    );
-  }
 
   return script.trim();
 }

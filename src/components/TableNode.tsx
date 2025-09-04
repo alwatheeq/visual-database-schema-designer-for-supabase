@@ -24,8 +24,6 @@ export default function TableNode({ data, selected }: TableNodeProps) {
   const [dragOverField, setDragOverField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Check if this is a system table
-  const isSystemTable = (data as any).isSystemTable || data.name === 'auth.users';
   // Global drag state cleanup
   useEffect(() => {
     const handleGlobalDragEnd = () => {
@@ -187,8 +185,7 @@ export default function TableNode({ data, selected }: TableNodeProps) {
     <div
       className={clsx(
         'bg-white rounded-lg shadow-lg border-2 min-w-[250px] transition-all',
-        selected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:shadow-xl',
-        isSystemTable && 'ring-2 ring-indigo-200'
+        selected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:shadow-xl'
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -201,10 +198,7 @@ export default function TableNode({ data, selected }: TableNodeProps) {
         style={{ backgroundColor: data.color }}
       >
         <Database size={18} />
-        <span className={clsx(isSystemTable && 'flex items-center gap-1')}>
-          {data.name}
-          {isSystemTable && <span className="text-xs opacity-75">(System)</span>}
-        </span>
+        <span>{data.name}</span>
         {data.enableRLS && (
           <Shield size={16} className="ml-auto opacity-80" />
         )}
